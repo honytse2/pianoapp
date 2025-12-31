@@ -1,0 +1,191 @@
+const { useState, useRef, useEffect } = React;
+
+const PianoTeachingApp = () => {
+import React, { useState, useRef, useEffect } from 'react';
+
+const PianoTeachingApp = () => {
+  const [taps, setTaps] = useState([]);
+  const audioContextRef = useRef(null);
+
+  useEffect(() => {
+    // Initialize Web Audio API
+    audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+  }, []);
+
+  // Piano notes frequencies for one octave (C4 to C5)
+  const notes = [
+    { note: 'C', freq: 261.63, isBlack: false },
+    { note: 'C#', freq: 277.18, isBlack: true },
+    { note: 'D', freq: 293.66, isBlack: false },
+    { note: 'D#', freq: 311.13, isBlack: true },
+    { note: 'E', freq: 329.63, isBlack: false },
+    { note: 'F', freq: 349.23, isBlack: false },
+    { note: 'F#', freq: 369.99, isBlack: true },
+    { note: 'G', freq: 392.00, isBlack: false },
+    { note: 'G#', freq: 415.30, isBlack: true },
+    { note: 'A', freq: 440.00, isBlack: false },
+    { note: 'A#', freq: 466.16, isBlack: true },
+    { note: 'B', freq: 493.88, isBlack: false },
+    { note: 'C', freq: 523.25, isBlack: false }
+  ];
+
+  const playNote = (frequency) => {
+    const ctx = audioContextRef.current;
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    oscillator.frequency.value = frequency;
+    oscillator.type = 'sine';
+
+    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1);
+
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 1);
+  };
+
+  const handleKeyPress = (note, freq, event, index) => {
+    playNote(freq);
+    
+    setTaps(prev => [...prev, { note, index, id: Date.now() }]);
+  };
+
+  const clearTaps = () => {
+    setTaps([]);
+  };
+
+  const whiteNotes = notes.filter(n => !n.isBlack);
+  const blackNotes = notes.filter(n => n.isBlack);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-amber-100 flex flex-col items-center justify-center p-4">
+      <div className="max-w-4xl w-full">
+        <h1 className="text-4xl font-serif text-amber-900 text-center mb-2">
+          Piano Teaching App
+        </h1>
+        <p className="text-center text-amber-700 mb-6">
+          Tap the keys to play notes and see where you've touched
+        </p>
+
+        <div className="bg-gradient-to-b from-amber-800 to-amber-900 p-6 rounded-lg shadow-2xl">
+          <div className="relative bg-white rounded" style={{ height: '300px' }}>
+            {/* White keys */}
+            <div className="flex h-full">
+              {whiteNotes.map((note, idx) => {
+                const originalIndex = notes.findIndex(n => n.note === note.note && n.freq === note.freq);
+                const keyTaps = taps.filter(t => t.index === originalIndex);
+                
+                return (
+                  <div
+                    key={`white-${idx}-${note.freq}`}
+                    className="flex-1 border-2 border-gray-800 bg-white hover:bg-gray-100 active:bg-gray-200 cursor-pointer relative transition-colors rounded-b"
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      handleKeyPress(note.note, note.freq, e.touches[0], originalIndex);
+                    }}
+                    onClick={(e) => handleKeyPress(note.note, note.freq, e, originalIndex)}
+                  >
+                    {keyTaps.map(tap => (
+                      <div
+                        key={tap.id}
+                        className="absolute w-6 h-6 bg-blue-500 rounded-full opacity-70 pointer-events-none"
+                        style={{
+                          left: '50%',
+                          top: '40%',
+                          transform: 'translate(-50%, -50%)'
+                        }}
+                      />
+                    ))}
+                    <span className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-sm font-semibold text-gray-700">
+                      {note.note}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Black keys */}
+            <div className="absolute top-0 left-0 w-full h-3/5 pointer-events-none">
+              <div className="flex h-full relative">
+                {whiteNotes.slice(0, -1).map((_, idx) => {
+                  const whiteKeyWidth = 100 / whiteNotes.length;
+                  const blackKeyIndex = [0, 1, 3, 4, 5][idx % 7];
+                  
+                  if (blackKeyIndex !== undefined && idx < 6) {
+                    const blackNote = blackNotes[Math.floor(idx / 7) * 5 + ([0, 1, 3, 4, 5].indexOf(idx % 7))];
+                    if (blackNote) {
+                      const originalIndex = notes.findIndex(n => n.note === blackNote.note && n.freq === blackNote.freq);
+                      const keyTaps = taps.filter(t => t.index === originalIndex);
+                      
+                      return (
+                        <div
+                          key={`black-${idx}`}
+                          className="absolute h-full bg-gradient-to-b from-gray-900 to-black hover:from-gray-800 hover:to-gray-900 active:from-gray-700 active:to-gray-800 cursor-pointer pointer-events-auto shadow-lg rounded-b"
+                          style={{
+                            width: `${whiteKeyWidth * 0.6}%`,
+                            left: `${whiteKeyWidth * (idx + 0.7)}%`,
+                          }}
+                          onTouchStart={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleKeyPress(blackNote.note, blackNote.freq, e.touches[0], originalIndex);
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleKeyPress(blackNote.note, blackNote.freq, e, originalIndex);
+                          }}
+                        >
+                          {keyTaps.map(tap => (
+                            <div
+                              key={tap.id}
+                              className="absolute w-5 h-5 bg-yellow-400 rounded-full opacity-80 pointer-events-none"
+                              style={{
+                                left: '50%',
+                                top: '40%',
+                                transform: 'translate(-50%, -50%)'
+                              }}
+                            />
+                          ))}
+                          <span className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-xs font-semibold text-white">
+                            {blackNote.note}
+                          </span>
+                        </div>
+                      );
+                    }
+                  }
+                  return null;
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 text-center">
+            <button
+              onClick={clearTaps}
+              className="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold py-3 px-8 rounded-lg shadow-lg transition-colors text-lg"
+            >
+              Clear Taps
+            </button>
+            <p className="text-amber-200 mt-3 text-sm">
+              Total taps: {taps.length}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 text-center text-amber-800">
+          <p className="text-sm">
+            🎹 Tap any key to play a note and see a circle marker appear
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PianoTeachingApp;
+};
+
+ReactDOM.render(<PianoTeachingApp />, document.getElementById('root'));
