@@ -1,9 +1,6 @@
 const { useState, useRef, useEffect } = React;
 
 const PianoTeachingApp = () => {
-import React, { useState, useRef, useEffect } from 'react';
-
-const PianoTeachingApp = () => {
   const [taps, setTaps] = useState([]);
   const audioContextRef = useRef(null);
 
@@ -183,9 +180,6 @@ const PianoTeachingApp = () => {
       </div>
     </div>
   );
-};
-
-export default PianoTeachingApp;
 };
 
 ReactDOM.render(<PianoTeachingApp />, document.getElementById('root'));
